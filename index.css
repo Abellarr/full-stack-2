@@ -1,0 +1,19 @@
+body {
+    background-image: url('https://images.hdqwalls.com/download/warhammer-40000-cover-5k-m6-2160x3840.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-color: black;
+}
+#container {
+    background-color: rgb(103, 98, 98);
+    width: 50%;
+    height: 80%;
+    text-align: center;
+    color: aliceblue;
+    margin: auto;
+    margin-top: 50px;
+    padding: 30px;
+    border-style: double;
+    border-color: aliceblue;
+    border-radius: 20px;
+}

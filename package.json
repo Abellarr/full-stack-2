@@ -1,7 +1,7 @@
 {
     "name": "full-stack-2",
     "verson": "0.1.0",
-    "description": "A small API designed to assist dungeonmasters create and store NPCs for use with Dungeons and Dragons",
+    "description": "A small API designed to create and store Warhammer 40k Imperium characters",
     "scripts": {
       "start": "node expressServer.js",
       "dev": "nodemon expressServer.js",
