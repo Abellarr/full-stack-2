@@ -24,7 +24,7 @@ app.get('/faction/all/chars', (req,res, next)=>{
 })
 
 // GET request: Returns info to client for all characters with a specific type (/npctype/:id/)
-app.get('/api/npctype/:id/chars', (req,res, next)=>{
+app.get('/faction/:id/chars', (req,res, next)=>{
     console.log(req.method);
     const typeId = parseInt(req.params.id);
     // Checks to see if the (/:id) is a valid number
@@ -32,8 +32,8 @@ app.get('/api/npctype/:id/chars', (req,res, next)=>{
         console.log('Error Invalid Path Name')
         return res.status(404).send('Error Invalid Path Name')
     } else {
-        console.log(`Request for chars with type_id: ${typeId}`)
-        pool.query('SELECT * FROM npc_char WHERE type_id = $1;', [typeId], (err, result)=>{
+        console.log(`Request for chars with faction_id: ${typeId}`)
+        pool.query('SELECT * FROM character WHERE faction_id = $1;', [typeId], (err, result)=>{
             if (err){
                 return next(err);
             }
@@ -48,8 +48,8 @@ app.get('/api/npctype/:id/chars', (req,res, next)=>{
     }
 })
 
-// GET request: Returns info to client for a specific character (/chars/:charid/) with a specific type (/npctype/:id/)
-app.get('/api/npctype/:id/chars/:charid/', (req,res, next)=>{
+// GET request: Returns info to client for a specific character (/chars/:charid/) with a faction type (/npctype/:id/)
+app.get('/faction/:id/chars/:charid', (req,res, next)=>{
     console.log(req.method);
     const typeId = parseInt(req.params.id);
     const charId = parseInt(req.params.charid);
@@ -58,8 +58,8 @@ app.get('/api/npctype/:id/chars/:charid/', (req,res, next)=>{
         console.log('Error Invalid Path Name')
         return res.status(404).send('Error Invalid Path Name')
     } else {
-        console.log(`Request for chars with type_id: ${typeId} and char_id: ${charId}`)
-        pool.query('SELECT * FROM npc_char WHERE type_id = $1 AND id = $2;', [typeId, charId], (err, result)=>{
+        console.log(`Request for chars with faction_id: ${typeId} and char_id: ${charId}`)
+        pool.query('SELECT * FROM character WHERE faction_id = $1 AND id = $2;', [typeId, charId], (err, result)=>{
             if (err){
                 return next(err);
             }
@@ -69,6 +69,103 @@ app.get('/api/npctype/:id/chars/:charid/', (req,res, next)=>{
                 res.status(200).send(char);
             } else {
                 res.status(404).send('Error Not found')
+            }
+        })
+    }
+})
+
+// POST request: Takes in request body and creates an entry into character table with associated key from faction table (/:id/)
+app.post('/faction/:id/chars', (req, res, next)=>{
+    console.log(req.method);
+    const { name, race, clas, factionId } = req.body;
+    console.log(req.body);
+    // checks for missing information in request and if the hitPoints block is a number
+    if (!name || !race || !clas || !factionId) {
+        console.log('Error: Input incorrect or missing information');
+        return res.status(400).send('Error: Input missing or corrected information');
+    } else {
+        pool.query('INSERT INTO character (name, race, class, faction_id) VALUES ($1, $2, $3, $4) RETURNING *;',
+        [name, race, clas, factionId], (err, result)=>{
+            if (err){
+                return next(err);
+            }
+            let charInfo = result.rows[0];
+            console.log('Added: ' + name);
+            res.status(200).send(charInfo);
+        })
+    } 
+})
+
+// PATCH request: Takes in request body and modifies an entry in the npc_char table (/chars/:charid/)
+app.patch('/faction/:id/chars/:charid', (req,res, next)=>{
+    console.log(req.method);
+    const typeId = parseInt(req.params.id);
+    const charId = parseInt(req.params.charid);
+    // Checks to see if (/:id) and (/:charid) are valid numbers
+    if (Number.isNaN(typeId) || Number.isNaN(charId)){
+        console.log('Error Invalid Path Name')
+        return res.status(404).send('Error Invalid Path Name')
+    }
+    const { name, race, clas, factionId } = req.body;
+    // Checks if the character exists in the table
+    pool.query('SELECT * FROM character WHERE id = $1 and faction_id = $2;', [charId, typeId], (err, result)=>{
+        console.log(`Request to update char with faction_id: ${typeId} and char_id: ${charId}`)
+        let info = result.rows[0];
+        if (err){
+            next(err);
+        }
+        if (info){
+            // Returns notification if character is successfully updated
+            if (name){
+                pool.query('UPDATE character SET name = $1 WHERE id = $2;', [name, charId], (err, result)=>{
+                    console.log(`Character name updated: ${name}`);
+                });
+            }
+            if (race){
+                pool.query('UPDATE character SET race = $1 WHERE id = $2;', [race, charId], (err, result)=>{
+                    console.log(`Character race updated: ${race}`);
+                });
+            }
+            if (clas){
+                pool.query('UPDATE character SET class = $1 WHERE id = $2;', [clas, charId], (err, result)=>{
+                    console.log(`Character class updated: ${clas}`);
+                });
+            }
+            if (factionId){
+                pool.query('UPDATE character SET faction_id = $1 WHERE id = $2;', [factionId, charId], (err, result)=>{
+                    console.log(`Character npc type updated: ${factionId}`);
+                });
+            }
+            return res.status(200).send('Character Updated');
+        } else {
+            // Returns not found if (/:id/ or /:charid/) doesn't match up
+            console.log('Error Not Found');
+            return res.status(404).send('Error Not Found');
+        }
+    });  
+})
+
+// DELETE request: Deletes a character (/:charid/) from the database and responds to client with deleted info
+app.delete('/faction/:id/chars/:charid', (req,res, next)=>{
+    console.log(req.method);
+    const charId = parseInt(req.params.charid);
+    // Checks to see if (/:id) and (/:charid) are valid numbers
+    if (Number.isNaN(charId)) {
+        console.log('Error Invalid Path Name');
+        return res.status(404).send('Error Invalid Path Name');
+    } else {
+        pool.query('DELETE FROM character WHERE id = $1 RETURNING *;', [charId], (err, result)=>{
+            if (err){
+                return next(err);
+            }
+            let delChar = result.rows[0];
+            // Checks if character was in the database and responds
+            if (delChar){
+                console.log(delChar);
+                res.status(200).send(delChar);
+            } else {
+                console.log('Character not found');
+                res.status(404).send('Error Not Found');
             }
         })
     }
